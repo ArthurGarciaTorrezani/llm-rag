@@ -11,7 +11,7 @@ NEO4J_URI = "bolt://localhost:7687"
 NEO4J_USER = "neo4j"
 NEO4J_PASSWORD = "password"
 
-INDEX_NAME = "javascript_index"
+INDEX_NAME = "index_bi"
 KEYWORD_INDEX_NAME = "keywords_bi"
 NODE_LABEL = "Chunk"
 TEXT_NODE_PROPERTY = "text"
@@ -24,8 +24,6 @@ neo4j_vector_index = None
 
 
 class SlicedGeminiEmbeddings:
-    """Corta os embeddings do Gemini em 768 posições (Matryoshka Embeddings)."""
-
     def __init__(self, base_embeddings):
         self.base_embeddings = base_embeddings
 
@@ -39,7 +37,6 @@ class SlicedGeminiEmbeddings:
 
 
 def _load_seed_documents():
-    """Carrega todos os arquivos .txt da pasta data/ usados para popular o índice na primeira vez."""
     documents = []
     data_dir = os.path.join(os.path.dirname(__file__), "data")
 
@@ -47,13 +44,7 @@ def _load_seed_documents():
         txt_files = [f for f in os.listdir(data_dir) if f.endswith(".txt")]
 
         if not txt_files:
-            print(f"⚠️ Nenhum arquivo .txt encontrado em {data_dir}. Usando dados de teste.")
-            return [
-                "JavaScript is a multi-paradigm language, supporting object-oriented programming.",
-                "JavaScript is light-weight, interpreted, or just-in-time compiled programming language.",
-                "Node.js is a runtime environment that allows you to execute JavaScript code outside a web browser.",
-            ]
-
+            print(f" Nenhum arquivo .txt encontrado em {data_dir}. Usando dados de teste.")
         for filename in txt_files:
             file_path = os.path.join(data_dir, filename)
             with open(file_path, "r", encoding="utf-8") as f:
@@ -64,17 +55,11 @@ def _load_seed_documents():
                     if len(clean_sentence) > 10:
                         documents.append(clean_sentence)
     else:
-        print(f"⚠️ Pasta {data_dir} não encontrada. Usando dados de teste.")
-        documents = [
-            "JavaScript is a multi-paradigm language, supporting object-oriented programming.",
-            "JavaScript is light-weight, interpreted, or just-in-time compiled programming language.",
-            "Node.js is a runtime environment that allows you to execute JavaScript code outside a web browser.",
-        ]
+        print(f" Pasta {data_dir} não encontrada. Usando dados de teste.")
     return documents
 
 
 def add_document_if_not_exists(text_content: str):
-    """Insere um documento no índice apenas se um texto muito similar ainda não existir."""
     global neo4j_vector_index
 
     try:
@@ -90,10 +75,6 @@ def add_document_if_not_exists(text_content: str):
 
 
 def init_rag(seed_if_empty: bool = True):
-    """
-    Inicializa o modelo, os embeddings e a conexão com o Neo4j.
-    Deve ser chamada uma única vez, no startup da aplicação.
-    """
     global model, neo4j_vector_index
 
     if not GOOGLE_API_KEY:
@@ -101,7 +82,7 @@ def init_rag(seed_if_empty: bool = True):
     if not NEO4J_PASSWORD:
         raise RuntimeError("NEO4J_PASSWORD não definida. Configure o arquivo .env.")
 
-    print("🔄 Inicializando modelos Gemini...")
+    print("Inicializando modelos Gemini...")
     model = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",
         google_api_key=GOOGLE_API_KEY,
@@ -115,7 +96,7 @@ def init_rag(seed_if_empty: bool = True):
     )
     gemini_embeddings = SlicedGeminiEmbeddings(base_gemini_embeddings)
 
-    print("🔄 Conectando ao Neo4j e inicializando o índice...")
+    print("Conectando ao Neo4j e inicializando o índice...")
     neo4j_vector_index = Neo4jVector.from_texts(
         texts=[],
         embedding=gemini_embeddings,
@@ -136,13 +117,12 @@ def init_rag(seed_if_empty: bool = True):
             if add_document_if_not_exists(doc_text):
                 inserted += 1
             time.sleep(1.0)
-        print(f"✅ Seed concluído: {inserted}/{len(seed_documents)} documentos novos inseridos.")
+        print(f"Seed concluído: {inserted}/{len(seed_documents)} documentos novos inseridos.")
 
-    print("✅ RAG inicializado com sucesso.")
+    print("RAG inicializado.")
 
 
 def ingest_texts(texts: list[str]) -> dict:
-    """Insere uma lista de textos novos no índice, pulando duplicados."""
     if neo4j_vector_index is None:
         raise RuntimeError("RAG não inicializado. Chame init_rag() primeiro.")
 
@@ -161,7 +141,6 @@ def ingest_texts(texts: list[str]) -> dict:
 
 
 def answer_question(question: str) -> str:
-    """Busca o contexto mais relevante no Neo4j e gera a resposta com o Gemini."""
     if neo4j_vector_index is None or model is None:
         raise RuntimeError("RAG não inicializado. Chame init_rag() primeiro.")
 
