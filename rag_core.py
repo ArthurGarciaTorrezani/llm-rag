@@ -12,7 +12,7 @@ NEO4J_USER = "neo4j"
 NEO4J_PASSWORD = "password"
 
 INDEX_NAME = "javascript_index"
-KEYWORD_INDEX_NAME = "javascript_keywords"
+KEYWORD_INDEX_NAME = "keywords_bi"
 NODE_LABEL = "Chunk"
 TEXT_NODE_PROPERTY = "text"
 EMBEDDING_NODE_PROPERTY = "embedding"
