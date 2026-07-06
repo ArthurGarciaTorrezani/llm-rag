@@ -8,10 +8,8 @@ from rag_core import init_rag, answer_question, ingest_texts
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Roda uma única vez, na subida do servidor
     init_rag()
     yield
-    # (espaço para cleanup futuro, ex: fechar conexão com o Neo4j)
 
 
 app = FastAPI(
